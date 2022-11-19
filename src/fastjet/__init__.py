@@ -33,7 +33,6 @@ from fastjet._swig import ClusterSequenceStructure  # noqa: F401, E402
 from fastjet._swig import ClusterSequenceVoronoiArea  # noqa: F401, E402
 from fastjet._swig import CompositeJetStructure  # noqa: F401, E402
 from fastjet._swig import E_scheme  # noqa: F401, E402
-from fastjet._swig import Error  # noqa: F401, E402
 from fastjet._swig import Error_set_default_stream  # noqa: F401, E402
 from fastjet._swig import Error_set_print_backtrace  # noqa: F401, E402
 from fastjet._swig import Error_set_print_errors  # noqa: F401, E402
@@ -47,7 +46,6 @@ from fastjet._swig import GhostedAreaSpec  # noqa: F401, E402
 from fastjet._swig import GridMedianBackgroundEstimator  # noqa: F401, E402
 from fastjet._swig import IndexedSortHelper  # noqa: F401, E402
 from fastjet._swig import InternalError  # noqa: F401, E402
-from fastjet._swig import JetDefinition  # noqa: F401, E402
 from fastjet._swig import JetDefinition0Param  # noqa: F401, E402
 from fastjet._swig import JetDefinition1Param  # noqa: F401, E402
 from fastjet._swig import JetDefinition2Param  # noqa: F401, E402
@@ -183,6 +181,8 @@ from fastjet._swig import vectorPJ  # noqa: F401, E402
 from fastjet._swig import voronoi_area  # noqa: F401, E402
 from fastjet._swig import zeta2  # noqa: F401, E402
 from fastjet._swig import zeta3  # noqa: F401, E402
+from fastjet._swig import Error as ErrorrOriginal  # noqa: F401, E402
+from fastjet._swig import JetDefinition as JetDefinitionNoCast  # noqa: F401, E402
 from fastjet._utils import cos_theta  # noqa: F401, E402
 from fastjet._utils import dot_product  # noqa: F401, E402
 from fastjet._utils import have_same_momentum  # noqa: F401, E402
@@ -199,16 +199,43 @@ from fastjet.version import __version__  # noqa: E402
 __all__ = ("__version__",)
 
 
+class Error(ErrorrOriginal, Exception):
+    pass
+
+
+class JetDefinition(JetDefinitionNoCast):
+    def __init__(self, *args):
+        r"""
+
+        `JetDefinition(JetAlgorithm jet_algorithm_in, double R_in, RecombinationScheme
+            recomb_scheme_in, Strategy strategy_in, int nparameters_in)`
+
+        constructor to fully specify a jet-definition (together with information about
+        how algorithically to run it).
+
+        """
+        if len(args) > 1 and isinstance(args[1], int):
+            args_list = list(args)
+            args_list[1] = float(args[1])
+            args = tuple(args_list)
+
+        assert isinstance(args[1], float), "R_in is not a float or an int"
+
+        fastjet._swig._fastjet.JetDefinition_swiginit(
+            self, fastjet._swig._fastjet.new_JetDefinition(*args)
+        )
+
+
 class ClusterSequence:  # The super class
     """The base class for all clustering.
 
     Args:
         data(awkward.highlevel.Array): The data for clustering.
-        jetdef(fastjet._swig.JetDefinition): The JetDefinition for clustering specification.
+        jetdef(fastjet.JetDefinition): The JetDefinition for clustering specification.
     """
 
     def __init__(self, data, jetdef):
-        if not isinstance(jetdef, fastjet._swig.JetDefinition):
+        if not isinstance(jetdef, JetDefinition):
             raise AttributeError("JetDefinition is not correct") from None
         if isinstance(data, ak.Array):
             self.__class__ = fastjet._pyjet.AwkwardClusterSequence
