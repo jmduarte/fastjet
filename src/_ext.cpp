@@ -369,7 +369,7 @@ PYBIND11_MODULE(_ext, m) {
             eventoffsets
           );
       }, "n_jets"_a = 0, R"pbdoc(
-        Retrieves the constituents of exclusive jets upto n jets from multievent clustering and converts them to numpy arrays.
+        Retrieves the constituents of exclusive jets up to n jets from multievent clustering and converts them to numpy arrays.
         Args:
           n_jets: Number of exclusive subjets. Default: 0.
         Returns:
@@ -1653,20 +1653,19 @@ PYBIND11_MODULE(_ext, m) {
         Returns:
           jet offsets, splitting Deltas, kts, and event offsets.
       )pbdoc")
-      .def("to_numpy_softdop_jets",
-      [](const output_wrapper ow, const int n_jets = 0) {
+      .def("to_numpy_softdrop_jets",
+      [](const output_wrapper ow, const double beta = 0, const double zcut = 0.1) {
         auto css = ow.cse;
         int64_t len = css.size();
         auto jk = 0;
 
         for(int i = 0; i < len; i++){
-          jk += css[i]->exclusive_jets(n_jets).size();
+          jk += css[i]->inclusive_jets().size();
         }
         jk++;
 
-        auto lund_generator = fastjet::contrib::LundGenerator();
-        std::vector<double> Delta_vec;
-        std::vector<double> kt_vec;
+
+        auto soft_drop = fastjet::contrib::SoftDrop sd(beta, z_cut);
 
         auto eventoffsets = py::array(py::buffer_info(nullptr, sizeof(int), py::format_descriptor<int>::value, 1, {len+1}, {sizeof(int)}));
         auto bufeventoffsets = eventoffsets.request();
@@ -1692,7 +1691,7 @@ PYBIND11_MODULE(_ext, m) {
           auto prev = ptrjetoffsets[jetidx-1];
 
           for (unsigned int j = 0; j < jets.size(); j++){
-            auto lund_result = lund_generator.result(jets[j]);
+            auto soft_drop_jet = soft_drop(jets[j]);
             auto splittings = lund_result.size();
             for (unsigned int k = 0; k < splittings; k++){
               Delta_vec.push_back(lund_result[k].Delta());
