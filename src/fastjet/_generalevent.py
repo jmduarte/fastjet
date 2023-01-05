@@ -567,6 +567,33 @@ class _classgeneralevent:
         res = ak.Array(self._replace_multi())
         return res
 
+    def softdrop_jets(self):
+        self._out = []
+        self._input_flag = 0
+        for i in range(len(self._clusterable_level)):
+            np_results = self._results[i].to_numpy_softdrop_jets()
+            of = np.insert(np_results[-1], len(np_results[-1]), len(np_results[0]))
+            self._out.append(
+                ak.Array(
+                    ak.contents.ListOffsetArray(
+                        ak.index.Index64(of),
+                        ak.contents.RecordArray(
+                            (
+                                ak.contents.NumpyArray(np_results[0]),
+                                ak.contents.NumpyArray(np_results[1]),
+                                ak.contents.NumpyArray(np_results[2]),
+                                ak.contents.NumpyArray(np_results[3]),
+                            ),
+                            ("px", "py", "pz", "E"),
+                            parameters={"__record__": "Momentum4D"},
+                        ),
+                    ),
+                    behavior=self.data.behavior,
+                )
+            )
+        res = ak.Array(self._replace_multi())
+        return res
+
     def exclusive_jets(self, n_jets, dcut):
         self._warn_for_exclusive()
         self._out = []

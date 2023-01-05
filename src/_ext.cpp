@@ -297,7 +297,7 @@ PYBIND11_MODULE(_ext, m) {
             off
           );
       }, "n_jets"_a = 0, R"pbdoc(
-        Retrieves the exclusive jets upto n jets from multievent clustering and converts them to numpy arrays.
+        Retrieves the exclusive jets up to n jets from multievent clustering and converts them to numpy arrays.
         Args:
           min_pt: Minimum jet pt to include. Default: 0.
         Returns:
@@ -428,7 +428,7 @@ PYBIND11_MODULE(_ext, m) {
             off
           );
       }, "dcut"_a = 100, R"pbdoc(
-        Retrieves the exclusive jets upto the given dcut from multievent clustering and converts them to numpy arrays.
+        Retrieves the exclusive jets up to the given dcut from multievent clustering and converts them to numpy arrays.
         Args:
           min_pt: Minimum jet pt to include. Default: 0.
         Returns:
@@ -485,7 +485,7 @@ PYBIND11_MODULE(_ext, m) {
             off
           );
       }, "dcut"_a = 100, R"pbdoc(
-        Retrieves the exclusive jets upto the given dcut from multievent clustering and converts them to numpy arrays.
+        Retrieves the exclusive jets up to the given dcut from multievent clustering and converts them to numpy arrays.
         Args:
           min_pt: Minimum jet pt to include. Default: 0.
         Returns:
@@ -1657,72 +1657,63 @@ PYBIND11_MODULE(_ext, m) {
       [](const output_wrapper ow, const double beta = 0, const double zcut = 0.1) {
         auto css = ow.cse;
         int64_t len = css.size();
-        auto jk = 0;
-
-        for(int i = 0; i < len; i++){
-          jk += css[i]->inclusive_jets().size();
-        }
-        jk++;
-
-
+        // Get softdrop algorithm
         auto soft_drop = fastjet::contrib::SoftDrop sd(beta, z_cut);
-
-        auto eventoffsets = py::array(py::buffer_info(nullptr, sizeof(int), py::format_descriptor<int>::value, 1, {len+1}, {sizeof(int)}));
-        auto bufeventoffsets = eventoffsets.request();
-        int *ptreventoffsets = (int *)bufeventoffsets.ptr;
-        size_t eventidx = 0;
-
-        ptreventoffsets[eventidx] = 0;
-        eventidx++;
-
-        auto jetoffsets = py::array(py::buffer_info(nullptr, sizeof(int), py::format_descriptor<int>::value, 1, {jk}, {sizeof(int)}));
-        auto bufjetoffsets = jetoffsets.request();
-        int *ptrjetoffsets = (int *)bufjetoffsets.ptr;
-        size_t jetidx = 0;
-
-        size_t idxh = 0;
-        ptrjetoffsets[jetidx] = 0;
-        jetidx++;
-        auto eventprev = 0;
-
-        for (unsigned int i = 0; i < css.size(); i++){  // iterate through events
-          auto jets = css[i]->exclusive_jets(n_jets);
-          int size = css[i]->exclusive_jets(n_jets).size();
-          auto prev = ptrjetoffsets[jetidx-1];
-
-          for (unsigned int j = 0; j < jets.size(); j++){
-            auto soft_drop_jet = soft_drop(jets[j]);
-            auto splittings = lund_result.size();
-            for (unsigned int k = 0; k < splittings; k++){
-              Delta_vec.push_back(lund_result[k].Delta());
-              kt_vec.push_back(lund_result[k].kt());
-            }
-
-            ptrjetoffsets[jetidx] = splittings + prev;
-            prev = ptrjetoffsets[jetidx];
-            jetidx++;
-          }
-
-          ptreventoffsets[eventidx] = jets.size() + eventprev;
-          eventprev = ptreventoffsets[eventidx];
-          eventidx++;
+        // Don't specify the size if using push_back.
+        auto jk = 0;
+        for(int i = 0; i < len; i++){
+        jk += css[i]->jets().size();
         }
+        auto px = py::array(py::buffer_info(nullptr, sizeof(double), py::format_descriptor<double>::value, 1, {jk}, {sizeof(double)}));
+        auto bufpx = px.request();
+        double *ptrpx = (double *)bufpx.ptr;
 
-        auto Deltas = py::array(Delta_vec.size(), Delta_vec.data());
-        auto kts = py::array(kt_vec.size(), kt_vec.data());
+        auto py = py::array(py::buffer_info(nullptr, sizeof(double), py::format_descriptor<double>::value, 1, {jk}, {sizeof(double)}));
+        auto bufpy = py.request();
+        double *ptrpy = (double *)bufpy.ptr;
 
+        auto pz = py::array(py::buffer_info(nullptr, sizeof(double), py::format_descriptor<double>::value, 1, {jk}, {sizeof(double)}));
+        auto bufpz = pz.request();
+        double *ptrpz = (double *)bufpz.ptr;
+
+        auto E = py::array(py::buffer_info(nullptr, sizeof(double), py::format_descriptor<double>::value, 1, {jk}, {sizeof(double)}));
+        auto bufE = E.request();
+        double *ptrE = (double *)bufE.ptr;
+
+        auto off = py::array(py::buffer_info(nullptr, sizeof(int), py::format_descriptor<int>::value, 1, {len+1}, {sizeof(int)}));
+        auto bufoff = off.request();
+        int *ptroff = (int *)bufoff.ptr;
+        size_t idxe = 0;
+        *ptroff = 0;
+        ptroff++;
+        for(int i = 0; i < len; i++){
+        auto jets = ow.cse[i]->jets();
+        for (unsigned int j = 0; j < jets.size(); j++)
+        {
+          auto soft_drop_jet = soft_drop(jets[j]);
+          ptrpx[idxe] = soft_drop_jet.px();
+          ptrpy[idxe] = soft_drop_jet.py();
+          ptrpz[idxe] = soft_drop_jet.pz();
+          ptrE[idxe] = soft_drop_jet.E();
+          idxe++;
+        }
+        *ptroff = jets.size()+*(ptroff-1);
+        ptroff++;
+        }
         return std::make_tuple(
-            jetoffsets,
-            Deltas,
-            kts,
-            eventoffsets
+            px,
+            py,
+            pz,
+            E,
+            off
           );
-      }, "n_jets"_a = 0, R"pbdoc(
-        Calculates the Lund declustering Delta and k_T parameters from exclusive n_jets and converts them to numpy arrays.
+      }, "beta"_a = 0, "zcut"_a = 0.1, R"pbdoc(
+        Retrieves the childless soft drop pseudojets from multievent clustering and converts them to numpy arrays.
         Args:
-          n_jets: Number of exclusive subjets. Default: 0.
+          beta: Power of the angular distance to be used in the symmetry condition. Default: 0.
+          zcut: Prefactor in the asymmetry cut. Default: 0.1.
         Returns:
-          jet offsets, splitting Deltas, kts, and event offsets.
+          pt, eta, phi, m of inclusive soft drop jets.
       )pbdoc")
       .def("to_numpy_unclustered_particles",
       [](const output_wrapper ow) {
