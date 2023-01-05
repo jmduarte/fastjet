@@ -567,11 +567,11 @@ class _classgeneralevent:
         res = ak.Array(self._replace_multi())
         return res
 
-    def softdrop_jets(self):
+    def softdrop_jets(self, beta, zcut):
         self._out = []
         self._input_flag = 0
         for i in range(len(self._clusterable_level)):
-            np_results = self._results[i].to_numpy_softdrop_jets()
+            np_results = self._results[i].to_numpy_softdrop_jets(beta, zcut)
             of = np.insert(np_results[-1], len(np_results[-1]), len(np_results[0]))
             self._out.append(
                 ak.Array(

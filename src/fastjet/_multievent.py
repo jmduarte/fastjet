@@ -462,8 +462,8 @@ class _classmultievent:
             behavior=self.data.behavior,
         )
 
-    def softdrop_jets(self):
-        np_results = self._results.to_numpy_softdrop_jets()
+    def softdrop_jets(self, beta, zcut):
+        np_results = self._results.to_numpy_softdrop_jets(beta, zcut)
         of = np_results[-1]
         return ak.Array(
             ak.contents.ListOffsetArray(

@@ -219,6 +219,9 @@ class AwkwardClusterSequence(ClusterSequence):
     def jets(self):
         return self._internalrep.jets()
 
+    def softdrop_jets(self, beta=0, zcut=0.1):
+        return self._internalrep.softdrop_jets()
+
     def get_parents(self, data):
         if not isinstance(data, ak.Array):
             raise TypeError("The input data is not an Awkward Array")
